@@ -1,31 +1,46 @@
-// 🔒 REPLACE with your own Spotify Client ID from developer dashboard
+// ✅ Your Spotify Client ID
 const SPOTIFY_CLIENT_ID = '329e873b7a9f45a4a8128770e084e27c';
 
-// This must match what you set in Spotify dashboard
+// ✅ Your Redirect URI from Spotify Dashboard
 const REDIRECT_URI = 'https://a6an.github.io/playlist-syncer/';
 
-// Spotify's authorization endpoint
+// Spotify Authorization Endpoint
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
 
-// Handle click on login button
-document.getElementById('spotifyLogin').addEventListener('click', () => {
-  const scopes = [
-    'playlist-read-private',
-    'playlist-read-collaborative'
-  ];
+// ✅ Debug: Confirm JS is loading
+console.log('✅ app.js loaded');
 
-  const url = `${SPOTIFY_AUTH_URL}?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes.join(' '))}`;
+// 🔘 Add event listener to Spotify login button
+const spotifyLoginButton = document.getElementById('spotifyLogin');
 
-  window.location.href = url;
-});
+if (spotifyLoginButton) {
+  spotifyLoginButton.addEventListener('click', () => {
+    console.log('🎵 Spotify login button clicked');
 
-// --- After redirect, Spotify returns access_token in the URL hash ---
-const hash = window.location.hash.substring(1); // remove "#"
-const params = new URLSearchParams(hash);
-const spotifyToken = params.get('access_token');
+    const scopes = [
+      'playlist-read-private',
+      'playlist-read-collaborative'
+    ];
 
-// If token exists, user is logged in!
-if (spotifyToken) {
-  document.getElementById('status').innerText = '✅ Logged in to Spotify!';
-  console.log('Spotify token:', spotifyToken);
+    const authUrl = `${SPOTIFY_AUTH_URL}?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes.join(' '))}`;
+
+    console.log('🔗 Redirecting to:', authUrl);
+    window.location.href = authUrl;
+  });
+} else {
+  console.error('❌ Could not find the #spotifyLogin button in the DOM');
 }
+
+// ✅ Handle access token after redirect
+window.addEventListener('load', () => {
+  const hash = window.location.hash.substring(1);
+  const params = new URLSearchParams(hash);
+  const spotifyToken = params.get('access_token');
+
+  if (spotifyToken) {
+    document.getElementById('status').innerText = '✅ Logged in to Spotify!';
+    console.log('🟢 Spotify access token:', spotifyToken);
+  } else {
+    console.log('ℹ️ No access token found in URL');
+  }
+});
