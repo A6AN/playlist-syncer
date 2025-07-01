@@ -93,15 +93,39 @@ async function fetchPlaylists(token) {
 
   data.items.forEach(playlist => {
     const html = `
-      <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 8px; max-width: 400px;">
-        <img src="${playlist.images[0]?.url || ''}" alt="Playlist cover" style="width: 100%; max-width: 300px; border-radius: 6px;">
-        <h3 style="margin: 10px 0;">${playlist.name}</h3>
-        <p>👤 ${playlist.owner.display_name} | 🎵 ${playlist.tracks.total} tracks</p>
-        <a href="${playlist.external_urls.spotify}" target="_blank" style="color: #1DB954;">Open in Spotify →</a>
-      </div>
-    `;
+  <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 8px; max-width: 400px;">
+    <label style="display: flex; align-items: center; gap: 10px;">
+      <input type="checkbox" class="playlist-checkbox" data-id="${playlist.id}" data-name="${playlist.name}" />
+      <strong>${playlist.name}</strong>
+    </label>
+    <img src="${playlist.images[0]?.url || ''}" alt="Playlist cover" style="width: 100%; max-width: 300px; border-radius: 6px; margin-top: 10px;">
+    <p>👤 ${playlist.owner.display_name} | 🎵 ${playlist.tracks.total} tracks</p>
+    <a href="${playlist.external_urls.spotify}" target="_blank" style="color: #1DB954;">Open in Spotify →</a>
+  </div>
+`;
+
     container.innerHTML += html;
   });
+
+  document.getElementById('syncSelected').style.display = 'block';
 }
 
 handleRedirect(); // Run on load
+
+document.getElementById('syncSelected').addEventListener('click', () => {
+  const checkboxes = document.querySelectorAll('.playlist-checkbox:checked');
+  const selected = Array.from(checkboxes).map(cb => ({
+    id: cb.dataset.id,
+    name: cb.dataset.name
+  }));
+
+  console.log('✅ Selected playlists:', selected);
+
+  if (selected.length === 0) {
+    alert('Please select at least one playlist.');
+    return;
+  }
+
+  alert(`Selected ${selected.length} playlist(s):\n` + selected.map(p => p.name).join('\n'));
+  // You can now send this `selected` array to Apple Music logic later.
+});
