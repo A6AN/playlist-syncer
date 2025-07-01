@@ -1,60 +1,93 @@
-// ✅ Your Spotify Client ID
-const SPOTIFY_CLIENT_ID = '329e873b7a9f45a4a8128770e084e27c';
-
-// ✅ Your Redirect URI from Spotify Dashboard
+// 🔒 Your actual client ID
+const CLIENT_ID = '329e873b7a9f45a4a8128770e084e27c';
 const REDIRECT_URI = 'https://a6an.github.io/playlist-syncer/';
+const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 
-// Spotify Authorization Endpoint
-const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
-
-// ✅ Debug: Confirm JS is loading
-console.log('✅ app.js loaded');
-
-// 🔘 Add event listener to Spotify login button
-const spotifyLoginButton = document.getElementById('spotifyLogin');
-
-if (spotifyLoginButton) {
-  spotifyLoginButton.addEventListener('click', () => {
-    console.log('🎵 Spotify login button clicked');
-
-    const scopes = [
-      'playlist-read-private',
-      'playlist-read-collaborative'
-    ];
-
-    const authUrl = `${SPOTIFY_AUTH_URL}?client_id=${SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=${encodeURIComponent(scopes.join(' '))}`;
-
-    console.log('🔗 Redirecting to:', authUrl);
-    window.location.href = authUrl;
-  });
-} else {
-  console.error('❌ Could not find the #spotifyLogin button in the DOM');
+// Step 1: Generate a random code verifier
+function generateCodeVerifier(length = 128) {
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return result;
 }
 
-// ✅ Handle access token after redirect
-// --- After redirect, Spotify returns access_token in the URL hash ---
-window.addEventListener('load', () => {
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
-  const spotifyToken = params.get('access_token');
+// Step 2: Hash it to create code challenge
+async function generateCodeChallenge(verifier) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+  return base64;
+}
 
-  if (spotifyToken) {
-    // ✅ Save token in localStorage so it stays on reload
-    localStorage.setItem('spotify_token', spotifyToken);
-    document.getElementById('status').innerText = '✅ Logged in to Spotify!';
-    console.log('🟢 Spotify access token:', spotifyToken);
+// Step 3: Handle Login Click
+document.getElementById('spotifyLogin').addEventListener('click', async () => {
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
 
-    // Clean up the URL by removing the token from the hash
-    history.replaceState(null, '', window.location.pathname);
-  } else {
-    // Try to load from localStorage
-    const savedToken = localStorage.getItem('spotify_token');
-    if (savedToken) {
-      document.getElementById('status').innerText = '✅ Logged in to Spotify (from saved token)';
-      console.log('🟢 Reusing saved token:', savedToken);
-    } else {
-      console.log('ℹ️ No access token found in URL or storage');
-    }
-  }
+  localStorage.setItem('verifier', verifier); // save for later
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    scope: 'playlist-read-private playlist-read-collaborative'
+  });
+
+  window.location = `https://accounts.spotify.com/authorize?${params.toString()}`;
 });
 
+// Step 4: Handle redirect back with code
+async function handleRedirect() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const verifier = localStorage.getItem('verifier');
+
+  if (!code) return;
+
+  const body = new URLSearchParams({
+    client_id: CLIENT_ID,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: REDIRECT_URI,
+    code_verifier: verifier
+  });
+
+  const response = await fetch(SPOTIFY_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+
+  const data = await response.json();
+
+  if (data.access_token) {
+    localStorage.setItem('spotify_token', data.access_token);
+    document.getElementById('status').innerText = '✅ Logged in to Spotify!';
+    console.log('🟢 Access token:', data.access_token);
+    history.replaceState(null, '', REDIRECT_URI); // Clean up URL
+    fetchPlaylists(data.access_token); // Optional if you want to fetch
+  } else {
+    console.error('❌ Failed to get token:', data);
+    document.getElementById('status').innerText = '❌ Login failed';
+  }
+}
+
+// Step 5: Fetch user playlists
+async function fetchPlaylists(token) {
+  const res = await fetch('https://api.spotify.com/v1/me/playlists', {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  const data = await res.json();
+  console.log('🎶 Your playlists:', data);
+  document.getElementById('playlists').innerText = JSON.stringify(data.items, null, 2);
+}
+
+handleRedirect(); // Call on load
