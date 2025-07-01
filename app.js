@@ -2,7 +2,7 @@
 const SPOTIFY_CLIENT_ID = '329e873b7a9f45a4a8128770e084e27c';
 
 // This must match what you set in Spotify dashboard
-const REDIRECT_URI = 'http://localhost:5500/';
+const REDIRECT_URI = 'https://a6an.github.io/playlist-syncer/';
 
 // Spotify's authorization endpoint
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
