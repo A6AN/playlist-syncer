@@ -5,25 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Playlist Syncer</title>
 
-  <!-- Apple Music SDK -->
-  <script src="https://js-cdn.music.apple.com/musickit/v1/musickit.js"></script>
-
-  <!-- Link to your CSS (optional for styling) -->
+  <!-- Optional: Add styling -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Spotify ↔ Apple Music Playlist Syncer</h1>
+  <h1>Spotify ↔ YouTube Music Playlist Syncer</h1>
 
   <button id="spotifyLogin">Login with Spotify</button>
-  <button id="appleLogin">Login with Apple Music</button>
+  <button id="appleLogin">Login with YouTube Music</button>
 
   <div id="status"></div>
 
-  <button id="syncSelected" style="margin: 15px 0; display: none;">Sync Selected to Apple Music</button>
-  <!-- ✅ ADD THIS just before your script tag -->
+  <button id="syncSelected" style="margin: 15px 0; display: none;">Sync Selected to YouTube Music</button>
+
   <div id="playlists"></div>
 
-  <!-- Your app's JavaScript -->
   <script src="app.js" defer></script>
 </body>
 </html>
