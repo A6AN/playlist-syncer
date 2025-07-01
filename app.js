@@ -32,15 +32,29 @@ if (spotifyLoginButton) {
 }
 
 // ✅ Handle access token after redirect
+// --- After redirect, Spotify returns access_token in the URL hash ---
 window.addEventListener('load', () => {
   const hash = window.location.hash.substring(1);
   const params = new URLSearchParams(hash);
   const spotifyToken = params.get('access_token');
 
   if (spotifyToken) {
+    // ✅ Save token in localStorage so it stays on reload
+    localStorage.setItem('spotify_token', spotifyToken);
     document.getElementById('status').innerText = '✅ Logged in to Spotify!';
     console.log('🟢 Spotify access token:', spotifyToken);
+
+    // Clean up the URL by removing the token from the hash
+    history.replaceState(null, '', window.location.pathname);
   } else {
-    console.log('ℹ️ No access token found in URL');
+    // Try to load from localStorage
+    const savedToken = localStorage.getItem('spotify_token');
+    if (savedToken) {
+      document.getElementById('status').innerText = '✅ Logged in to Spotify (from saved token)';
+      console.log('🟢 Reusing saved token:', savedToken);
+    } else {
+      console.log('ℹ️ No access token found in URL or storage');
+    }
   }
 });
+
