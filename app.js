@@ -73,21 +73,35 @@ async function handleRedirect() {
     document.getElementById('status').innerText = '✅ Logged in to Spotify!';
     console.log('🟢 Access token:', data.access_token);
     history.replaceState(null, '', REDIRECT_URI); // Clean up URL
-    fetchPlaylists(data.access_token); // Optional if you want to fetch
+    fetchPlaylists(data.access_token);
   } else {
     console.error('❌ Failed to get token:', data);
     document.getElementById('status').innerText = '❌ Login failed';
   }
 }
 
-// Step 5: Fetch user playlists
+// Step 5: Fetch and display playlists nicely
 async function fetchPlaylists(token) {
   const res = await fetch('https://api.spotify.com/v1/me/playlists', {
     headers: { Authorization: 'Bearer ' + token }
   });
   const data = await res.json();
   console.log('🎶 Your playlists:', data);
-  document.getElementById('playlists').innerText = JSON.stringify(data.items, null, 2);
+
+  const container = document.getElementById('playlists');
+  container.innerHTML = ''; // clear old content
+
+  data.items.forEach(playlist => {
+    const html = `
+      <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; border-radius: 8px; max-width: 400px;">
+        <img src="${playlist.images[0]?.url || ''}" alt="Playlist cover" style="width: 100%; max-width: 300px; border-radius: 6px;">
+        <h3 style="margin: 10px 0;">${playlist.name}</h3>
+        <p>👤 ${playlist.owner.display_name} | 🎵 ${playlist.tracks.total} tracks</p>
+        <a href="${playlist.external_urls.spotify}" target="_blank" style="color: #1DB954;">Open in Spotify →</a>
+      </div>
+    `;
+    container.innerHTML += html;
+  });
 }
 
-handleRedirect(); // Call on load
+handleRedirect(); // Run on load
