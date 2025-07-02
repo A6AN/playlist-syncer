@@ -92,6 +92,17 @@ async function handleRedirect() {
     history.replaceState(null, '', REDIRECT_URI);
   }
 
+  // Handle Google access token in URL fragment
+const hash = new URLSearchParams(window.location.hash.substring(1));
+const googleToken = hash.get('access_token');
+
+if (googleToken) {
+  localStorage.setItem('google_token', googleToken);
+  document.getElementById('status').innerText += ' ✅ Logged in to Google!';
+  console.log('🔴 Google token:', googleToken);
+  history.replaceState(null, '', GOOGLE_REDIRECT_URI);
+}
+
   // ✅ YouTube OAuth token
   if (hashParams.has('access_token')) {
     const ytToken = hashParams.get('access_token');
@@ -158,6 +169,22 @@ async function handleSyncSelected() {
     const tracks = await getSpotifyTracks(playlist.id, token);
     console.log(`🎵 Tracks from "${playlist.name}":`, tracks);
     // TODO: send to YouTube search here
+    const googleToken = localStorage.getItem('google_token');
+  if (!googleToken) {
+    alert('Please log into Google first.');
+    return;
+  }
+
+  for (const track of tracks.slice(0, 5)) { // Limit to first 5 for now
+    const searchQuery = `${track.name} ${track.artists}`;
+    const result = await searchYouTubeTrack(searchQuery, googleToken);
+
+    if (result) {
+      console.log(`🔍 Found YouTube: ${result.title} → ${result.url}`);
+    } else {
+      console.warn(`❌ No YouTube result for ${searchQuery}`);
+    }
+  }
   }
 
   alert('✅ Fetched tracks. Check console for results.');
@@ -190,3 +217,42 @@ async function getSpotifyTracks(playlistId, token) {
   return tracks;
 }
 
+document.getElementById('googleLogin').addEventListener('click', () => {
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_REDIRECT_URI,
+    response_type: 'token',
+    scope: GOOGLE_SCOPES,
+    include_granted_scopes: 'true'
+  });
+
+  window.location = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+});
+
+async function searchYouTubeTrack(query, googleToken) {
+  const params = new URLSearchParams({
+    part: 'snippet',
+    maxResults: 1,
+    q: query,
+    type: 'video'
+  });
+
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${googleToken}`,
+      Accept: 'application/json'
+    }
+  });
+
+  const data = await res.json();
+  if (data.items && data.items.length > 0) {
+    const video = data.items[0];
+    return {
+      videoId: video.id.videoId,
+      title: video.snippet.title,
+      url: `https://www.youtube.com/watch?v=${video.id.videoId}`
+    };
+  } else {
+    return null;
+  }
+}
