@@ -134,21 +134,59 @@ async function fetchPlaylists(token) {
 }
 
 // --- Step 6: Handle Sync Click ---
-document.getElementById('syncSelected').addEventListener('click', () => {
+document.getElementById('syncSelected').addEventListener('click', handleSyncSelected);
+
+async function handleSyncSelected() {
   const checkboxes = document.querySelectorAll('.playlist-checkbox:checked');
   const selected = Array.from(checkboxes).map(cb => ({
     id: cb.dataset.id,
     name: cb.dataset.name
   }));
 
-  console.log('✅ Selected playlists:', selected);
-
   if (selected.length === 0) {
     alert('Please select at least one playlist.');
     return;
   }
 
-  alert(`Selected ${selected.length} playlist(s):\n` + selected.map(p => p.name).join('\n'));
+  const token = localStorage.getItem('spotify_token');
+  if (!token) {
+    alert('Spotify token missing. Please log in again.');
+    return;
+  }
 
-  // ➡️ Ready to integrate YouTube playlist creation next!
-});
+  for (const playlist of selected) {
+    const tracks = await getSpotifyTracks(playlist.id, token);
+    console.log(`🎵 Tracks from "${playlist.name}":`, tracks);
+    // TODO: send to YouTube search here
+  }
+
+  alert('✅ Fetched tracks. Check console for results.');
+}
+
+async function getSpotifyTracks(playlistId, token) {
+  const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+  const tracks = [];
+
+  let next = url;
+  while (next) {
+    const res = await fetch(next, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+
+    data.items.forEach(item => {
+      const track = item.track;
+      if (track) {
+        tracks.push({
+          name: track.name,
+          artists: track.artists.map(a => a.name).join(', ')
+        });
+      }
+    });
+
+    next = data.next;
+  }
+
+  return tracks;
+}
+
